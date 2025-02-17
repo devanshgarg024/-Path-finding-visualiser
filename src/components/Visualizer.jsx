@@ -198,31 +198,49 @@ const Visualizer = () => {
 
     return visitedNodesInOrder;
   };
-
   const astar = (grid, startNode, endNode) => {
     const visitedNodesInOrder = [];
     startNode.distance = 0;
     startNode.heuristic = calculateHeuristic(startNode, endNode);
-    const unvisitedNodes = getAllNodes(grid);
-
-    while (unvisitedNodes.length) {
-      sortNodesByDistance(unvisitedNodes);
-      const closestNode = unvisitedNodes.shift();
-
-      if (closestNode.isWall) continue;
-      if (closestNode.distance === Infinity) break;
-
-      closestNode.isVisited = true;
-      visitedNodesInOrder.push(closestNode);
-
-      if (closestNode === endNode) break;
-
-      updateAStarUnvisitedNeighbors(closestNode, endNode, grid, unvisitedNodes);
+    
+    const openSet = [startNode]; // Acts as a priority queue
+    
+    while (openSet.length) {
+      // Sort openSet based on f(n) = g(n) + h(n)
+      openSet.sort((a, b) => (a.distance + a.heuristic) - (b.distance + b.heuristic));
+  
+      const currentNode = openSet.shift(); // Remove the node with the lowest f(n)
+  
+      if (currentNode.isWall) continue; // Ignore walls
+      if (currentNode.distance === Infinity) break; // No path exists
+  
+      currentNode.isVisited = true;
+      visitedNodesInOrder.push(currentNode);
+  
+      if (currentNode === endNode) break; // Path found
+  
+      updateAStarUnvisitedNeighbors(currentNode, endNode, grid, openSet);
     }
-
+  
     return visitedNodesInOrder;
   };
-
+  
+  const updateAStarUnvisitedNeighbors = (node, endNode, grid, openSet) => {
+    const neighbors = getNeighbors(node, grid);
+    for (const neighbor of neighbors) {
+      const distanceToNeighbor = node.distance + 1;
+      if (distanceToNeighbor < neighbor.distance) {
+        neighbor.distance = distanceToNeighbor;
+        neighbor.previousNode = node;
+        neighbor.heuristic = calculateHeuristic(neighbor, endNode);
+        
+        if (!openSet.includes(neighbor)) {
+          openSet.push(neighbor); // Add the updated neighbor back to the open set
+        }
+      }
+    }
+  };
+  
   const bfs = (grid, startNode, endNode) => {
     const visitedNodesInOrder = [];
     const queue = [];
@@ -304,18 +322,7 @@ const Visualizer = () => {
     }
   };
 
-  const updateAStarUnvisitedNeighbors = (node, endNode, grid, unvisitedNodes) => {
-    const neighbors = getNeighbors(node, grid);
-    for (const neighbor of neighbors) {
-      const distanceToNeighbor = node.distance + 1;
-      if (distanceToNeighbor < neighbor.distance) {
-        neighbor.distance = distanceToNeighbor;
-        neighbor.previousNode = node;
-        neighbor.heuristic = calculateHeuristic(neighbor, endNode);
-      }
-    }
-    sortNodesByHeuristic(unvisitedNodes);
-  };
+
 
   const calculateHeuristic = (node, endNode) => {
     const dx = Math.abs(node.col - endNode.col);
